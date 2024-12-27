@@ -1,5 +1,5 @@
 /*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
+Copyright © 2024 AKHIL SAKTHIESWARAN <EMAIL ADDRESS>
 */
 package cmd
 
@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"loadtest/lib"
 	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -23,8 +24,12 @@ var testCmd = &cobra.Command{
 			c, _ := cmd.Flags().GetInt("concurrency")
 			n, _ := cmd.Flags().GetInt("requests")
 
-			fmt.Println("Testing url: ", url)
-			fmt.Println("Number of requests: ", n)
+			// Set the log file path
+			logFilePath, _ := cmd.Flags().GetString("logfile")
+			fmt.Println("Log file path: ", logFilePath)
+			logFile, _ := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+			log.SetOutput(logFile)
+
 			lib.TestUrl(url, n, c)
 			defer log.Println("Test completed")
 		} else {
@@ -36,18 +41,6 @@ var testCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(testCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// testCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// testCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 	testCmd.Flags().IntP("requests", "n", 1, "Number of requests")
-
 	testCmd.Flags().IntP("concurrency", "c", 1, "Number of concurrent requests")
-
 }

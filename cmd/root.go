@@ -13,10 +13,10 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "loadtest",
 	Short: "A HTTP Load Tester built in Go",
-	Long: `A HTTP Load Tester built in Go`,
+	Long:  `A HTTP Load Tester built in Go`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	// Run: func(cmd *cobra.Command, args []string) {},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -38,4 +38,5 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().StringP("logfile", "l", "/dev/null", "File to log output to")
 }
