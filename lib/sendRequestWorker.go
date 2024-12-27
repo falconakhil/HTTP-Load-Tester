@@ -53,7 +53,16 @@ func sendRequestWorker(workerID int, url string, jobs chan int, response chan Re
 		}
 		lastByteTime := time.Since(start)
 
-		resp.responseCode = parseStatusCode(string(http_response))
+		response_code := parseStatusCode(string(http_response))
+		if response_code == -1 {
+			log.Println("Error: Couldn't parse status code")
+			response <- resp
+			continue
+		} else if response_code != 200 {
+			log.Println("Error: Response code is not 200, but ", response_code)
+		}
+
+		resp.responseCode = response_code
 		resp.firstByteTime = float64(firstByteTime.Milliseconds())
 		resp.lastByteTime = float64(lastByteTime.Milliseconds())
 		resp.responseTime = float64(lastByteTime.Milliseconds() - firstByteTime.Milliseconds())
