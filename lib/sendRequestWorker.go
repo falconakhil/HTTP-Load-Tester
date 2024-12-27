@@ -11,7 +11,7 @@ import (
 
 func sendRequestWorker(workerID int, url string, jobs chan int, response chan Response) {
 	for j := range jobs {
-		log.Printf("Worker %d processing job %d", workerID, j)
+		log.Printf("sendRequestWorker %d processing job %d\n", workerID, j)
 
 		resp := Response{
 			responseCode:  -1,

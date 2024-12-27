@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
+	"sync"
 )
 
 type Response struct {
@@ -17,19 +17,44 @@ type Response struct {
 	lastByteTime  float64
 }
 
+type Test struct {
+	url         string
+	requests    int
+	concurrency int
+}
+
 func TestUrl(url string, requests int, concurrency int) {
+
+	fmt.Println("Testing url: ", url)
+	fmt.Println("Number of requests: ", requests)
+
 	analysis_channel := make(chan *models.Analysis)
-	go testUrl(url, requests, concurrency, analysis_channel)
+	test_channel := make(chan *Test)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go testUrlWorker(0, test_channel, analysis_channel, &wg)
+
+	test := Test{
+		url:         url,
+		requests:    requests,
+		concurrency: concurrency,
+	}
+	test_channel <- &test
+
 	analysis := <-analysis_channel
+
 	fmt.Println()
 	models.DisplayAnalysis(analysis)
 }
 
-func TestFile(filepath string) {
+func TestFile(filepath string, concurrent_urls int) {
 	file, err := os.Open(filepath)
+
 	if err != nil {
 		log.Fatal("Error while reading the file", err)
 	}
+	defer file.Close()
 	reader := csv.NewReader(file)
 
 	records, err := reader.ReadAll()
@@ -38,7 +63,16 @@ func TestFile(filepath string) {
 	}
 
 	analysis_channel := make(chan *models.Analysis)
-	urls := 0
+	test_channel := make(chan *Test)
+
+	var wg sync.WaitGroup
+	for i := 0; i < concurrent_urls; i++ {
+		wg.Add(1)
+		go testUrlWorker(i, test_channel, analysis_channel, &wg)
+	}
+
+	go displayAnalysisWorker(analysis_channel)
+
 	for _, record := range records {
 		url := record[0]
 
@@ -52,41 +86,15 @@ func TestFile(filepath string) {
 			log.Fatal("Error while converting concurrency to int", err)
 		}
 
-		go testUrl(url, requests, concurrency, analysis_channel)
-		urls = urls + 1
+		test := Test{
+			url:         url,
+			requests:    requests,
+			concurrency: concurrency,
+		}
+		log.Println("Adding to queue: ", test)
+		test_channel <- &test
 	}
-	defer file.Close()
-	for i := 0; i < urls; i++ {
-		analysis := <-analysis_channel
-		fmt.Println()
-		models.DisplayAnalysis(analysis)
-	}
-	close(analysis_channel)
-
-}
-
-func testUrl(url string, requests int, concurrency int, analysis_channel chan *models.Analysis) {
-	fmt.Println("Testing url: ", url)
-	fmt.Println("Number of requests: ", requests)
-
-	log.Println("Testing url: ", url)
-	log.Println("Number of requests: ", requests)
-	log.Println("Concurrency", concurrency)
-
-	response := make(chan Response, requests)
-	jobs := make(chan int)
-	for i := 0; i < concurrency; i++ {
-		go sendRequestWorker(i, url, jobs, response)
-	}
-
-	startTime := time.Now()
-	for i := 0; i < requests; i++ {
-		jobs <- i
-	}
-	log.Println("Closing jobs")
-	close(jobs)
-
-	analysis := models.InitalizeAnalysis(url, requests, concurrency)
-	analyzeResponses(requests, response, startTime, &analysis)
-	analysis_channel <- &analysis
+	close(test_channel)
+	wg.Wait()
+	analysis_channel <- nil
 }
