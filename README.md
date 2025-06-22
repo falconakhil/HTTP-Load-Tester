@@ -14,14 +14,13 @@ A command-line utility for HTTP load testing that allows you to benchmark the pe
 
 ### Prerequisites
 
-- Go 1.13 or higher
+- Go
 
 ### Building from source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/http-load-tester.git
-cd http-load-tester
+git clone https://github.com/falconakhil/HTTP-Load-Tester.git
 
 # Build the binary
 go build -o loadtest
