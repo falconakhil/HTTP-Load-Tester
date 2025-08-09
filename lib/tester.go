@@ -28,6 +28,7 @@ func TestUrl(url string, requests int, concurrency int) {
 	fmt.Println("Testing url: ", url)
 	fmt.Println("Number of requests: ", requests)
 
+	// Create a channel for the test urls and for the output analysis
 	analysis_channel := make(chan *models.Analysis)
 	test_channel := make(chan *Test)
 
@@ -97,4 +98,48 @@ func TestFile(filepath string, concurrent_urls int) {
 	close(test_channel)
 	wg.Wait()
 	analysis_channel <- nil
+}
+
+func TestRange(url string, requests int, concurrencyBegin int, concurrencyEnd int, concurrencyStep int, output_dir string){
+	
+	// Validate input parameters
+    if concurrencyStep <= 0 {
+        log.Fatal("concurrencyStep must be greater than 0")
+    }
+    if concurrencyBegin > concurrencyEnd {
+        log.Fatal("concurrencyBegin must be less than or equal to concurrencyEnd")
+    }
+
+	analysis_channel := make(chan *models.Analysis)
+	test_channel := make(chan *Test)
+
+	var wg sync.WaitGroup
+	wg.Add(1);
+
+	// Start a single testUrlWorker
+	go testUrlWorker(0,test_channel,analysis_channel,&wg)
+
+	analysis_collection := models.AnalysisCollection{}
+	go models.AccumulateAsCollection(analysis_channel, &analysis_collection)
+
+	// Add tests for multiple concurrencies
+	for concurrency := concurrencyBegin; concurrency <= concurrencyEnd; concurrency+=concurrencyStep {
+		test := Test{
+			url:         url,
+			requests:    requests,
+			concurrency: concurrency,
+		}
+		test_channel <- &test
+	}
+
+	close(test_channel)
+
+	wg.Wait()
+
+	analysis_channel <- nil
+	close(analysis_channel)
+
+	// Plot graphs
+	PlotGraphs(output_dir,analysis_collection)
+
 }
